@@ -1,4 +1,6 @@
 
+using TestAssignment.Repository.IRepository;
+using TestAssignment.Repository;
 using TestAssignment.Services;
 
 namespace TestAssignment
@@ -16,8 +18,25 @@ namespace TestAssignment
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+
             builder.Services.AddHostedService<TemporalBlockService>();
             builder.Services.AddHttpClient<IPGeolocationService>();
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll",
+                    policy =>
+                    {
+                        policy.AllowAnyOrigin()   
+                              .AllowAnyMethod()   
+                              .AllowAnyHeader();  
+                    });
+            });
+
+
 
             var app = builder.Build();
 
@@ -28,9 +47,12 @@ namespace TestAssignment
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+             app.UseHttpsRedirection();
+
+            app.UseCors("AllowAll");
 
             app.UseAuthorization();
+
 
 
             app.MapControllers();

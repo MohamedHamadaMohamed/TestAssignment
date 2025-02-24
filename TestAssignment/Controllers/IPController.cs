@@ -2,6 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using TestAssignment.Data;
+using TestAssignment.Models;
+using TestAssignment.Repository;
+using TestAssignment.Repository.IRepository;
 using TestAssignment.Services;
 
 namespace TestAssignment.Controllers
@@ -11,10 +14,13 @@ namespace TestAssignment.Controllers
     public class IPController : ControllerBase
     {
         private readonly IPGeolocationService _iPGeolocationService;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public IPController(IPGeolocationService iPGeolocationService)
+        public IPController(IPGeolocationService iPGeolocationService , IUnitOfWork unitOfWork)
         {
             _iPGeolocationService = iPGeolocationService;
+            this._unitOfWork = unitOfWork;
+
         }
         [HttpGet("lookup")]
 
@@ -34,10 +40,24 @@ namespace TestAssignment.Controllers
             if (string.IsNullOrEmpty(countryCode))
                 return BadRequest("Unable to determine country Code");
 
-            bool isBlocked = BlockedCounty.IsBlocked(countryCode);
+            var blocked = _unitOfWork.BlockedCountryRepository.RetriveItem(filter: e => e.code == countryCode);
+            var temp = _unitOfWork.TemporalBlockRepository.RetriveItem(filter: e => e.CountryCode == countryCode);
+
+            bool isBlocked = blocked !=null || temp != null;
 
             if (isBlocked)
-                BlockedCounty.AddToBlockedAttempts(userIp, countryCode, Request.Headers["User-Agent"].ToString());
+            {
+                _unitOfWork.BlockedAttemptRepository.Create(new BlockedAttempt
+                {
+                    CountryCode = countryCode,
+                    IP = userIp,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    Timestamp = DateTime.UtcNow
+
+                });
+            }
+
+
 
             return Ok(new { userIp, countryCode, isBlocked });
         }

@@ -1,6 +1,6 @@
 ﻿namespace TestAssignment.Models
 {
-    public class BlockCountry
+    public class BlockedCountry
     {
         public string code { get; set; } = null!;
     }

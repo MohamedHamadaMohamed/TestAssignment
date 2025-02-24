@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TestAssignment.Data;
 using TestAssignment.Models;
+using TestAssignment.Repository.IRepository;
 using TestAssignment.Services;
 
 namespace TestAssignment.Controllers
@@ -10,68 +11,64 @@ namespace TestAssignment.Controllers
     [ApiController]
     public class BlockedCountriesController : ControllerBase
     {
-        
+        private readonly IUnitOfWork _unitOfWork;
+
+        public BlockedCountriesController(IUnitOfWork unitOfWork)
+        {
+            this._unitOfWork = unitOfWork;
+        }
+
 
         [HttpGet("blocked")]
         public IActionResult blocked(int currentPage =1 , string? searchInput=null)
         {
             if (currentPage < 1) currentPage = 1;
-            var blockedCoutries = new List<string>();
+            var blockedCoutries = new List<BlockedCountry>();
             if(searchInput !=null)
             {
-                blockedCoutries = BlockedCounty.BlocledCountries.Where(e =>e.Contains(searchInput)).Skip((currentPage - 1) * 5).Take(5).ToList();
+                blockedCoutries = _unitOfWork.BlockedCountryRepository.Retrive(e => e.code.Contains(searchInput)).Skip((currentPage - 1) * 5).Take(5).ToList(); //InMemoryCollections.BlocledCountries.Where(e =>e.Contains(searchInput)).Skip((currentPage - 1) * 5).Take(5).ToList();
             }
             else
             {
-                blockedCoutries = BlockedCounty.BlocledCountries.Skip((currentPage - 1) * 5).Take(5).ToList();
+                blockedCoutries = _unitOfWork.BlockedCountryRepository.Retrive().Skip((currentPage - 1) * 5).Take(5).ToList(); //InMemoryCollections.BlocledCountries.Where(e =>e.Contains(searchInput)).Skip((currentPage - 1) * 5).Take(5).ToList();
 
             }
 
 
             return Ok(blockedCoutries);
         }
+
         [HttpPost("block")]
         public IActionResult block(string code)
         {
             // Prevent duplicates
 
-            if (!BlockedCounty.IsBlocked(code))
+            var coutry = _unitOfWork.BlockedCountryRepository.RetriveItem(filter: e => e.code == code);
+
+
+            if (coutry == null)
             {
-                BlockedCounty.Add(code);
+                _unitOfWork.BlockedCountryRepository.Create(new BlockedCountry { code = code });
+                return Ok($"Country {code} blocked successfully.");
+
             }
-            return Ok($"Country {code} blocked successfully.");
+            return Ok($"Country {code} have already  blocked .");
+
         }
         [HttpDelete("block/{countryCode}")]
         public IActionResult UnBlock(string code)
         {
-            if (BlockedCounty.IsBlocked(code))
+            var coutry = _unitOfWork.BlockedCountryRepository.RetriveItem(filter: e => e.code == code);
+
+            if (coutry != null)
             {
-                BlockedCounty.Remove(code);
+                _unitOfWork.BlockedCountryRepository.Delete(coutry);
                 return Ok($"Country {code} unblocked successfully.");
-            }
-            return BadRequest("the country is not blocked.");
-        }
-        [HttpPost("temporal-block")]
-        public IActionResult TemporyBlock(string countryCode, int DurationMinutes)
-        {
-            BlockedCounty.AddToTemporalBlocks(countryCode, DurationMinutes);
-            return Ok($"Country {countryCode} temporarily blocked for {DurationMinutes} minutes.");
-        }
-        [HttpGet("TemporyBlocked")]
-        public IActionResult TemporyBlocked(int currentPage = 1, string? searchInput = null)
-        {
-            if (currentPage < 1) currentPage = 1;
-            var TemporalBlocks = new List<TemporalBlock>();
-            if (searchInput != null)
-            {
-                TemporalBlocks = BlockedCounty.TemporalBlocks.Where(e => e.CountryCode.Contains(searchInput)).Skip((currentPage - 1) * 5).Take(5).ToList();
-            }
-            else
-            {
-                TemporalBlocks = BlockedCounty.TemporalBlocks.Skip((currentPage - 1) * 5).Take(5).ToList();
 
             }
-            return Ok(TemporalBlocks);
+            return BadRequest("the country is not blocked.");
+
         }
+       
     }
 }

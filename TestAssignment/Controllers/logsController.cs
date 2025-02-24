@@ -12,7 +12,7 @@ namespace TestAssignment.Controllers
         public IActionResult Index(int currentPage=1)
         {
             if (currentPage < 1) currentPage = 1;
-            var BlockedAttempts = BlockedCounty.BlockedAttempts.Skip(currentPage-1).Take(5).ToList();
+            var BlockedAttempts = InMemoryCollections.BlockedAttempts.Skip(currentPage-1).Take(5).ToList();
 
             return Ok(BlockedAttempts);
 
